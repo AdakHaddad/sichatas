@@ -1,22 +1,25 @@
-"use client"; // Required for Next.js App Router
+"use client";
 
-import { MapContainer, TileLayer } from "react-leaflet";
+import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
+
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false }
+);
 
 export default function Home() {
   return (
     <div className="relative min-h-screen">
       {/* Leaflet Map as Background */}
-      <div className="absolute inset-0 z-0 filter blur-sm brightness-75">
+      <div className="absolute inset-0 z-0 filter blur-md brightness-75">
         <MapContainer
-          center={[-7.770072, 110.377509]} // Teknik UGM coordinates
-          zoom={15}
-          style={{ height: "100%", width: "100%" }}
-          attributionControl={false}
-          zoomControl={false}
-          dragging={false}
-          doubleClickZoom={false}
-          scrollWheelZoom={false}
+          style={{ height: "100vh", width: "100vw" }}
+          className="pointer-events-none" // Prevents interaction with the map
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         </MapContainer>
