@@ -9,17 +9,29 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/leaflet": "^1.9.16",
+    "@types/react-scroll": "^1.8.10",
+    "@types/turf": "^3.5.32",
+    "@urbica/react-map-gl": "^1.16.2",
+    "axios": "^1.8.4",
     "leaflet": "^1.9.4",
+    "lucide-react": "^0.501.0",
+    "mapbox-gl": "^3.11.0",
     "next": "15.1.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "react-map-gl": "^8.0.4",
+    "react-scroll": "^1.9.3",
+    "turf": "^3.0.14"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-map-gl": "^6.1.7",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
     "postcss": "^8",
