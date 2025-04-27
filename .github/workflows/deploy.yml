@@ -1,0 +1,28 @@
+name: Deploy Bun App to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Decode PEM key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > key.pem
+          chmod 600 key.pem
+
+      - name: Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+            cd ${{ secrets.APP_DIR }}
+            git pull origin main
+            bun install
+            bunx pm2 start bun --name sichatas -- run start || bunx pm2 restart sichatas
+          EOF
