@@ -37,8 +37,18 @@ jobs:
           echo "Building (if needed)..."
           bun run build || echo "No build script"
 
-          echo "Restarting PM2 service..."
-          bunx pm2 restart sichatas || bunx pm2 start bun --name sichatas -- run start
+          echo "Managing PM2 service..."
+          # Check if process exists first, then either reload or start new
+          if bunx pm2 list | grep -q "sichatas"; then
+            echo "Reloading existing PM2 process..."
+            bunx pm2 reload sichatas || bunx pm2 restart sichatas
+          else
+            echo "Starting new PM2 process..."
+            bunx pm2 start bun --name sichatas -- run start
+          fi
+
+          echo "Saving PM2 process list..."
+          bunx pm2 save
 
           echo "Reloading Nginx (if needed)..."
           sudo systemctl reload nginx || echo "Nginx not reloaded"
