@@ -34,24 +34,46 @@ jobs:
           echo "Installing dependencies..."
           bun install
 
-          echo "Building (if needed)..."
-          bun run build || echo "No build script"
+          echo "Building the application..."
+          bun run build
 
-          echo "Managing PM2 service..."
-          # Check if process exists first, then either reload or start new
-          if bunx pm2 list | grep -q "sichatas"; then
-            echo "Reloading existing PM2 process..."
-            bunx pm2 reload sichatas || bunx pm2 restart sichatas
+          echo "Ensuring PORT is set in environment..."
+          if ! grep -q "PORT=" .env; then
+            echo "PORT=3000" >> .env
+            echo "Added PORT=3000 to .env file"
+          fi
+
+          echo "Stopping any existing PM2 processes..."
+          bunx pm2 stop sichatas || echo "No process named sichatas to stop"
+          bunx pm2 delete sichatas || echo "No process named sichatas to delete"
+
+          echo "Starting application with PM2..."
+          # Use next start for production mode with explicit port
+          bunx pm2 start npm --name sichatas -- start -- --port 3000
+
+          echo "Checking if application is running..."
+          sleep 5
+          if bunx pm2 list | grep -q "sichatas" && bunx pm2 show sichatas | grep -q "online"; then
+            echo "✅ Application is running successfully!"
+            echo "PM2 process details:"
+            bunx pm2 show sichatas
           else
-            echo "Starting new PM2 process..."
-            bunx pm2 start bun --name sichatas -- run start
+            echo "⚠️ Warning: Application might not be running properly"
+            echo "Showing recent logs:"
+            bunx pm2 logs sichatas --lines 20 || echo "No logs available"
           fi
 
           echo "Saving PM2 process list..."
           bunx pm2 save
 
-          echo "Reloading Nginx (if needed)..."
-          sudo systemctl reload nginx || echo "Nginx not reloaded"
+          echo "Testing Nginx configuration..."
+          sudo nginx -t && echo "✅ Nginx configuration is valid" || echo "❌ Nginx configuration has errors"
+
+          echo "Reloading Nginx..."
+          sudo systemctl reload nginx
+
+          echo "Verifying server response..."
+          curl -I http://localhost:3000 || echo "⚠️ Warning: Could not connect to application on port 3000"
 
           echo "Deployed to ${{ secrets.DOMAIN }} successfully!"
         EOF
