@@ -48,8 +48,8 @@ jobs:
           bunx pm2 delete sichatas || echo "No process named sichatas to delete"
 
           echo "Starting application with PM2..."
-          # Use next start for production mode with explicit port
-          bunx pm2 start npm --name sichatas -- start -- --port 3000
+          # Start Next.js directly with bun instead of npm
+          bunx pm2 start "bun" --name sichatas -- run start
 
           echo "Checking if application is running..."
           sleep 5
