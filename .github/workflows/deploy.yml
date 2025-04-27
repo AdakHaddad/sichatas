@@ -25,6 +25,9 @@ jobs:
           set -e
           cd ${{ secrets.APP_DIR }}
 
+          echo "Stashing local changes..."
+          git stash || echo "No changes to stash"
+
           echo "Pulling latest code..."
           git pull origin main
 
@@ -42,6 +45,7 @@ jobs:
 
           echo "Deployed to ${{ secrets.DOMAIN }} successfully!"
         EOF
+
 
     - name: Clean up
       run: rm -f private_key.pem
