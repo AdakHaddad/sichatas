@@ -15,11 +15,39 @@ import { useState, useEffect } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import MapGL, { Source, Layer, Popup } from "@urbica/react-map-gl";
 import * as turf from "@turf/turf";
-import { FeatureCollection, Polygon, GeoJsonProperties } from "geojson";
+import {
+  FeatureCollection,
+  Polygon,
+  GeoJsonProperties,
+  Feature,
+} from "geojson";
 import { MapMouseEvent, LngLat } from "mapbox-gl";
+
+// Fix for EventData - create an interface based on mapbox documentation
+interface EventData {
+  originalEvent: MouseEvent | TouchEvent | WheelEvent;
+  type: string;
+  target: any;
+  point: { x: number; y: number };
+  lngLat: LngLat;
+  preventDefault: () => void;
+  defaultPrevented: boolean;
+}
 
 const MAP_SERVICE_KEY = process.env.NEXT_PUBLIC_MAPID_KEY || "";
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+
+interface FasumFeature extends Feature {
+  properties: {
+    type?: string;
+    building?: string;
+    [key: string]: unknown;
+  };
+}
+
+interface FasumGeoJson extends FeatureCollection {
+  features: FasumFeature[];
+}
 
 const MapView = () => {
   const [viewport, setViewport] = useState({
@@ -28,14 +56,22 @@ const MapView = () => {
     zoom: 14.5,
   });
   const [showBuffer, setShowBuffer] = useState(false);
-  const [showIsochrone, setShowIsochrone] = useState(false);
-  const [dataBuffer, setDataBuffer] = useState<FeatureCollection<Polygon, GeoJsonProperties> | null>(null);
+  const [dataBuffer, setDataBuffer] = useState<FeatureCollection<
+    Polygon,
+    GeoJsonProperties
+  > | null>(null);
   const [showPopup, setShowPopup] = useState(false);
-  const [popupInfo, setPopupInfo] = useState<{ longitude: number; latitude: number } | null>(null);
-  const [fasumData, setFasumData] = useState<FeatureCollection | null>(null);
+  const [popupInfo, setPopupInfo] = useState<{
+    longitude: number;
+    latitude: number;
+  } | null>(null);
+  const [fasumData, setFasumData] = useState<FasumGeoJson | null>(null);
   const [jawaData, setJawaData] = useState<FeatureCollection | null>(null);
-  const [jawaHealthData, setJawaHealthData] = useState<FeatureCollection | null>(null);
-  const [klHealthData, setKlHealthData] = useState<FeatureCollection | null>(null);
+  const [jawaHealthData, setJawaHealthData] =
+    useState<FeatureCollection | null>(null);
+  const [klHealthData, setKlHealthData] = useState<FeatureCollection | null>(
+    null
+  );
   const [showFasum, setShowFasum] = useState(true);
   const [showJawa, setShowJawa] = useState(true);
   const [showJawaHealth, setShowJawaHealth] = useState(true);
@@ -51,15 +87,20 @@ const MapView = () => {
         // Fetch fasum data
         const fasumResponse = await fetch("/api/fasum");
         if (!fasumResponse.ok) {
-          throw new Error(`Failed to fetch fasum: ${fasumResponse.status} ${fasumResponse.statusText}`);
+          throw new Error(
+            `Failed to fetch fasum: ${fasumResponse.status} ${fasumResponse.statusText}`
+          );
         }
         const fasumData = await fasumResponse.json();
         console.log("Raw fasum API response:", fasumData);
 
-        if (fasumData.type === "FeatureCollection" && Array.isArray(fasumData.features)) {
-          const validFasumGeoJson: FeatureCollection = {
+        if (
+          fasumData.type === "FeatureCollection" &&
+          Array.isArray(fasumData.features)
+        ) {
+          const validFasumGeoJson: FasumGeoJson = {
             type: "FeatureCollection",
-            features: fasumData.features.map((feature: any) => ({
+            features: fasumData.features.map((feature: FasumFeature) => ({
               type: "Feature",
               geometry: feature.geometry,
               properties: feature.properties || {},
@@ -67,9 +108,9 @@ const MapView = () => {
           };
           setFasumData(validFasumGeoJson);
         } else if (Array.isArray(fasumData)) {
-          const validFasumGeoJson: FeatureCollection = {
+          const validFasumGeoJson: FasumGeoJson = {
             type: "FeatureCollection",
-            features: fasumData.map((feature: any) => ({
+            features: fasumData.map((feature: FasumFeature) => ({
               type: "Feature",
               geometry: feature.geometry,
               properties: feature.properties || {},
@@ -83,15 +124,20 @@ const MapView = () => {
         // Fetch jawa data
         const jawaResponse = await fetch("/api/jawa");
         if (!jawaResponse.ok) {
-          throw new Error(`Failed to fetch jawa: ${jawaResponse.status} ${fasumResponse.statusText}`);
+          throw new Error(
+            `Failed to fetch jawa: ${jawaResponse.status} ${fasumResponse.statusText}`
+          );
         }
         const jawaData = await jawaResponse.json();
         console.log("Raw jawa API response:", jawaData);
 
-        if (jawaData.type === "FeatureCollection" && Array.isArray(jawaData.features)) {
+        if (
+          jawaData.type === "FeatureCollection" &&
+          Array.isArray(jawaData.features)
+        ) {
           const validJawaGeoJson: FeatureCollection = {
             type: "FeatureCollection",
-            features: jawaData.features.map((feature: any) => ({
+            features: jawaData.features.map((feature: Feature) => ({
               type: "Feature",
               geometry: feature.geometry,
               properties: feature.properties || {},
@@ -105,15 +151,20 @@ const MapView = () => {
         // Fetch jawa_health data
         const jawaHealthResponse = await fetch("/api/jawa_health");
         if (!jawaHealthResponse.ok) {
-          throw new Error(`Failed to fetch jawa_health: ${jawaHealthResponse.status} ${jawaHealthResponse.statusText}`);
+          throw new Error(
+            `Failed to fetch jawa_health: ${jawaHealthResponse.status} ${jawaHealthResponse.statusText}`
+          );
         }
         const jawaHealthData = await jawaHealthResponse.json();
         console.log("Raw jawa_health API response:", jawaHealthData);
 
-        if (jawaHealthData.type === "FeatureCollection" && Array.isArray(jawaHealthData.features)) {
+        if (
+          jawaHealthData.type === "FeatureCollection" &&
+          Array.isArray(jawaHealthData.features)
+        ) {
           const validJawaHealthGeoJson: FeatureCollection = {
             type: "FeatureCollection",
-            features: jawaHealthData.features.map((feature: any) => ({
+            features: jawaHealthData.features.map((feature: Feature) => ({
               type: "Feature",
               geometry: feature.geometry,
               properties: feature.properties || {},
@@ -121,21 +172,28 @@ const MapView = () => {
           };
           setJawaHealthData(validJawaHealthGeoJson);
         } else {
-          throw new Error("Invalid jawa_health GeoJSON format received from API");
+          throw new Error(
+            "Invalid jawa_health GeoJSON format received from API"
+          );
         }
 
         // Fetch kl_health data
         const klHealthResponse = await fetch("/api/kl_health");
         if (!klHealthResponse.ok) {
-          throw new Error(`Failed to fetch kl_health: ${klHealthResponse.status} ${klHealthResponse.statusText}`);
+          throw new Error(
+            `Failed to fetch kl_health: ${klHealthResponse.status} ${klHealthResponse.statusText}`
+          );
         }
         const klHealthData = await klHealthResponse.json();
         console.log("Raw kl_health API response:", klHealthData);
 
-        if (klHealthData.type === "FeatureCollection" && Array.isArray(klHealthData.features)) {
+        if (
+          klHealthData.type === "FeatureCollection" &&
+          Array.isArray(klHealthData.features)
+        ) {
           const validKlHealthGeoJson: FeatureCollection = {
             type: "FeatureCollection",
-            features: klHealthData.features.map((feature: any) => ({
+            features: klHealthData.features.map((feature: Feature) => ({
               type: "Feature",
               geometry: feature.geometry,
               properties: feature.properties || {},
@@ -145,9 +203,9 @@ const MapView = () => {
         } else {
           throw new Error("Invalid kl_health GeoJSON format received from API");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Fetch error:", err);
-        setError(err.message || "Failed to load data");
+        setError(err instanceof Error ? err.message : "Failed to load data");
       } finally {
         setIsLoading(false);
       }
@@ -159,11 +217,16 @@ const MapView = () => {
   const clickBuffer = (e: { lngLat: LngLat }) => {
     const pt = turf.point([e.lngLat.lng, e.lngLat.lat]);
     const pointFeatureCollection = turf.featureCollection([pt]);
-    const buffered = turf.buffer(pointFeatureCollection, 1, { units: "kilometers" as "kilometers" }) as FeatureCollection<Polygon>;
+
+    // Fix: Use string literal for units, not an object
+    const buffered = turf.buffer(
+      pointFeatureCollection,
+      1,
+      "kilometers"
+    ) as FeatureCollection<Polygon>;
 
     setDataBuffer(buffered);
     setShowBuffer(true);
-    setShowIsochrone(false);
     setShowPopup(false);
 
     fetch("/api/spatial", {
@@ -235,14 +298,14 @@ const MapView = () => {
             zoom={viewport.zoom}
             onViewportChange={setViewport}
             onClick={handleMapClick}
-            onError={(e: any) => console.error("Map error:", e)}
-            onDrag={(e: any) => console.log("Dragging:", e)}
+            onError={(e: Error) => console.error("Map error:", e)}
+            onDrag={(e: EventData) => console.log("Dragging:", e)}
             dragPan
             scrollZoom
-            touchZoom
+            // Remove touchZoom prop as it's not supported
             doubleClickZoom
             dragRotate={false}
-            interactive
+            
           >
             {showPopup && popupInfo && (
               <Popup
@@ -256,7 +319,14 @@ const MapView = () => {
                   <p>Longitude: {popupInfo.longitude.toFixed(6)}</p>
                   <p>Latitude: {popupInfo.latitude.toFixed(6)}</p>
                   <button
-                    onClick={() => clickBuffer({ lngLat: new LngLat(popupInfo.longitude, popupInfo.latitude) })}
+                    onClick={() =>
+                      clickBuffer({
+                        lngLat: new LngLat(
+                          popupInfo.longitude,
+                          popupInfo.latitude
+                        ),
+                      })
+                    }
                     className="mt-2 bg-[#C1FF9B] hover:bg-[#A8E689] px-4 py-1 rounded text-sm"
                   >
                     Create Buffer
@@ -269,7 +339,6 @@ const MapView = () => {
                 <Layer
                   id="buffer-layer"
                   type="fill"
-                  source="buffer-data"
                   paint={{
                     "fill-color": "#088",
                     "fill-opacity": 0.4,
@@ -283,18 +352,24 @@ const MapView = () => {
                 <Layer
                   id="fasum-layer-fill"
                   type="fill"
-                  source="fasum-data"
                   paint={{
                     "fill-color": [
                       "match",
                       ["get", "type"],
-                      "house", "#FF9900",
-                      "school", "#3388ff",
-                      "general", "#ffcc00",
-                      "commercial", "#ff6600",
-                      "mosque", "#00cc66",
-                      "church", "#9900cc",
-                      "hospital", "#ff0000",
+                      "house",
+                      "#FF9900",
+                      "school",
+                      "#3388ff",
+                      "general",
+                      "#ffcc00",
+                      "commercial",
+                      "#ff6600",
+                      "mosque",
+                      "#00cc66",
+                      "church",
+                      "#9900cc",
+                      "hospital",
+                      "#ff0000",
                       "#FF9900",
                     ],
                     "fill-opacity": 0.6,
@@ -303,7 +378,6 @@ const MapView = () => {
                 <Layer
                   id="fasum-layer-outline"
                   type="line"
-                  source="fasum-data"
                   paint={{
                     "line-color": "#666",
                     "line-width": 1,
@@ -316,7 +390,6 @@ const MapView = () => {
                 <Layer
                   id="jawa-layer-fill"
                   type="fill"
-                  source="jawa-data"
                   paint={{
                     "fill-color": "#800080",
                     "fill-opacity": 0.3,
@@ -325,7 +398,6 @@ const MapView = () => {
                 <Layer
                   id="jawa-layer-outline"
                   type="line"
-                  source="jawa-data"
                   paint={{
                     "line-color": "#000000",
                     "line-width": 2,
@@ -334,11 +406,14 @@ const MapView = () => {
               </Source>
             )}
             {showJawaHealth && jawaHealthData && (
-              <Source id="jawa-health-data" type="geojson" data={jawaHealthData}>
+              <Source
+                id="jawa-health-data"
+                type="geojson"
+                data={jawaHealthData}
+              >
                 <Layer
                   id="jawa-health-layer-fill"
                   type="fill"
-                  source="jawa-health-data"
                   paint={{
                     "fill-color": "#00FF00",
                     "fill-opacity": 0.4,
@@ -347,7 +422,6 @@ const MapView = () => {
                 <Layer
                   id="jawa-health-layer-outline"
                   type="line"
-                  source="jawa-health-data"
                   paint={{
                     "line-color": "#006600",
                     "line-width": 1,
@@ -360,7 +434,6 @@ const MapView = () => {
                 <Layer
                   id="kl-health-layer-fill"
                   type="fill"
-                  source="kl-health-data"
                   paint={{
                     "fill-color": "#0000FF",
                     "fill-opacity": 0.4,
@@ -369,7 +442,6 @@ const MapView = () => {
                 <Layer
                   id="kl-health-layer-outline"
                   type="line"
-                  source="kl-health-data"
                   paint={{
                     "line-color": "#000066",
                     "line-width": 1,
@@ -403,14 +475,22 @@ const MapView = () => {
           <button
             onClick={toggleJawaHealthLayer}
             className="bg-[#C1FF9B] hover:bg-[#A8E689] text-black p-3 rounded-full shadow-lg transition-colors"
-            title={showJawaHealth ? "Hide Jawa Healthcare Layer" : "Show Jawa Healthcare Layer"}
+            title={
+              showJawaHealth
+                ? "Hide Jawa Healthcare Layer"
+                : "Show Jawa Healthcare Layer"
+            }
           >
             {showJawaHealth ? <Eye size={24} /> : <EyeOff size={24} />}
           </button>
           <button
             onClick={toggleKlHealthLayer}
             className="bg-[#C1FF9B] hover:bg-[#A8E689] text-black p-3 rounded-full shadow-lg transition-colors"
-            title={showKlHealth ? "Hide Kalimantan Healthcare Layer" : "Show Kalimantan Healthcare Layer"}
+            title={
+              showKlHealth
+                ? "Hide Kalimantan Healthcare Layer"
+                : "Show Kalimantan Healthcare Layer"
+            }
           >
             {showKlHealth ? <Eye size={24} /> : <EyeOff size={24} />}
           </button>
