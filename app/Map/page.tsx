@@ -27,7 +27,7 @@ import { MapMouseEvent, LngLat } from "mapbox-gl";
 interface EventData {
   originalEvent: MouseEvent | TouchEvent | WheelEvent;
   type: string;
-  target: any;
+  target: unknown;
   point: { x: number; y: number };
   lngLat: LngLat;
   preventDefault: () => void;
@@ -48,15 +48,7 @@ interface FasumFeature extends Feature {
 interface FasumGeoJson extends FeatureCollection {
   features: FasumFeature[];
 }
-// Fix for EventData - create an interface based on mapbox documentation
-interface EventData {
-  originalEvent: MouseEvent | TouchEvent | WheelEvent;
-  type: string;
-  point: { x: number; y: number };
-  lngLat: LngLat;
-  preventDefault: () => void;
-  defaultPrevented: boolean;
-}
+
 
 const MapView = () => {
   const [viewport, setViewport] = useState({
