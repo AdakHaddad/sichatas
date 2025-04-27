@@ -38,14 +38,13 @@ jobs:
           bun run build || echo "No build script"
 
           echo "Restarting PM2 service..."
-          pm2 restart sichatas || pm2 start bun --name sichatas -- run start
+          bunx pm2 restart sichatas || bunx pm2 start bun --name sichatas -- run start
 
           echo "Reloading Nginx (if needed)..."
           sudo systemctl reload nginx || echo "Nginx not reloaded"
 
           echo "Deployed to ${{ secrets.DOMAIN }} successfully!"
         EOF
-
 
     - name: Clean up
       run: rm -f private_key.pem
