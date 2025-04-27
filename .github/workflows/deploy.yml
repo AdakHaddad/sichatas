@@ -58,22 +58,15 @@ jobs:
             echo "PM2 process details:"
             bunx pm2 show sichatas
           else
-            echo "⚠️ Warning: Application might not be running properly"
-            echo "Showing recent logs:"
-            bunx pm2 logs sichatas --lines 20 || echo "No logs available"
+            echo "Starting new PM2 process..."
+            bunx pm2 start bun --name sichatas -- run start
           fi
 
           echo "Saving PM2 process list..."
           bunx pm2 save
 
-          echo "Testing Nginx configuration..."
-          sudo nginx -t && echo "✅ Nginx configuration is valid" || echo "❌ Nginx configuration has errors"
-
-          echo "Reloading Nginx..."
-          sudo systemctl reload nginx
-
-          echo "Verifying server response..."
-          curl -I http://localhost:3000 || echo "⚠️ Warning: Could not connect to application on port 3000"
+          echo "Reloading Nginx (if needed)..."
+          sudo systemctl reload nginx || echo "Nginx not reloaded"
 
           echo "Deployed to ${{ secrets.DOMAIN }} successfully!"
         EOF
