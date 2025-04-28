@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Share,
   Layers,
@@ -31,94 +29,7 @@ import {
   MultiPolygon,
 } from "geojson";
 import { MapMouseEvent, LngLat } from "mapbox-gl";
-function hasCoordinates(
-  geometry: Geometry
-): geometry is
-  | Point
-  | LineString
-  | MultiPoint
-  | MultiLineString
-  | GeoPolygon
-  | MultiPolygon {
-  return geometry.type !== "GeometryCollection" && "coordinates" in geometry;
-}
 
-
-const fetchGeoJsonData = useCallback(
-  async (endpoint: string, setter: (data: any) => void, dataType: string) => {
-    try {
-      const response = await fetch(`/api/${endpoint}`);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch ${dataType}: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
-      console.log(`Raw ${dataType} API response:`, data);
-
-      if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
-        // Filter out invalid geometries
-        const validFeatures = data.features.filter(
-          (feature: Feature) =>
-            feature.geometry && 
-            hasCoordinates(feature.geometry) &&
-            feature.geometry.coordinates &&
-            feature.geometry.coordinates.length > 0
-        );
-
-        console.log(
-          `${dataType}: ${validFeatures.length} valid features out of ${data.features.length}`
-        );
-
-        const validGeoJson: FeatureCollection = {
-          type: "FeatureCollection",
-          features: validFeatures.map((feature: Feature) => ({
-            type: "Feature",
-            geometry: feature.geometry,
-            properties: feature.properties || {},
-          })),
-        };
-
-        setter(validGeoJson);
-        return validFeatures.length;
-      } else if (Array.isArray(data)) {
-        // Handle array of features
-        const validFeatures = data.filter(
-          (feature: Feature) =>
-            feature.geometry && 
-            hasCoordinates(feature.geometry) &&
-            feature.geometry.coordinates &&
-            feature.geometry.coordinates.length > 0
-        );
-
-        console.log(
-          `${dataType} (array): ${validFeatures.length} valid features out of ${data.length}`
-        );
-
-        const validGeoJson: FeatureCollection = {
-          type: "FeatureCollection",
-          features: validFeatures.map((feature: Feature) => ({
-            type: "Feature",
-            geometry: feature.geometry,
-            properties: feature.properties || {},
-          })),
-        };
-
-        setter(validGeoJson);
-        return validFeatures.length;
-      } else {
-        throw new Error(
-          `Invalid ${dataType} GeoJSON format received from API`
-        );
-      }
-    } catch (error) {
-      console.error(`Error fetching ${dataType}:`, error);
-      throw error;
-    }
-  },
-  []
-);
 // Fix for EventData - create an interface based on mapbox documentation
 interface EventData {
   originalEvent: MouseEvent | TouchEvent | WheelEvent;
@@ -151,6 +62,19 @@ const DEFAULT_VIEWPORT = {
 
 const MAP_SERVICE_KEY = process.env.NEXT_PUBLIC_MAPID_KEY || "";
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+
+// Type guard helper function - this can be outside the component as it's not a hook
+function hasCoordinates(
+  geometry: Geometry
+): geometry is
+  | Point
+  | LineString
+  | MultiPoint
+  | MultiLineString
+  | GeoPolygon
+  | MultiPolygon {
+  return geometry.type !== "GeometryCollection" && "coordinates" in geometry;
+}
 
 const MapView = () => {
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT);
@@ -190,129 +114,134 @@ const MapView = () => {
     klHealth: 0,
   });
 
-  // Fetch GeoJSON data for a specific dataset
- const fetchGeoJsonData = useCallback(
-   async (endpoint: string, setter: (data: any) => void, dataType: string) => {
-     try {
-       const response = await fetch(`/api/${endpoint}`);
-       if (!response.ok) {
-         throw new Error(
-           `Failed to fetch ${dataType}: ${response.status} ${response.statusText}`
-         );
-       }
+  // Fixed: Added proper type instead of any
+  // Fix for the type error by creating proper type casting or adjusting function signatures
 
-       const data = await response.json();
-       console.log(`Raw ${dataType} API response:`, data);
+  // Fixed: Update the fetchGeoJsonData function to use generics for proper typing
+  const fetchGeoJsonData = useCallback(
+    async <T extends FeatureCollection>(
+      endpoint: string,
+      setter: (data: T) => void,
+      dataType: string
+    ) => {
+      try {
+        const response = await fetch(`/api/${endpoint}`);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch ${dataType}: ${response.status} ${response.statusText}`
+          );
+        }
 
-       if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
-         // Filter out invalid geometries
-         const validFeatures = data.features.filter(
-           (feature: Feature) =>
-             feature.geometry &&
-             hasCoordinates(feature.geometry) &&
-             feature.geometry.coordinates &&
-             feature.geometry.coordinates.length > 0
-         );
+        const data = await response.json();
+        console.log(`Raw ${dataType} API response:`, data);
 
-         console.log(
-           `${dataType}: ${validFeatures.length} valid features out of ${data.features.length}`
-         );
+        if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
+          // Filter out invalid geometries
+          const validFeatures = data.features.filter(
+            (feature: Feature) =>
+              feature.geometry &&
+              hasCoordinates(feature.geometry) &&
+              feature.geometry.coordinates &&
+              feature.geometry.coordinates.length > 0
+          );
 
-         const validGeoJson: FeatureCollection = {
-           type: "FeatureCollection",
-           features: validFeatures.map((feature: Feature) => ({
-             type: "Feature",
-             geometry: feature.geometry,
-             properties: feature.properties || {},
-           })),
-         };
+          console.log(
+            `${dataType}: ${validFeatures.length} valid features out of ${data.features.length}`
+          );
 
-         setter(validGeoJson);
-         return validFeatures.length;
-       } else if (Array.isArray(data)) {
-         // Handle array of features
-         const validFeatures = data.filter(
-           (feature: Feature) =>
-             feature.geometry &&
-             hasCoordinates(feature.geometry) &&
-             feature.geometry.coordinates &&
-             feature.geometry.coordinates.length > 0
-         );
+          const validGeoJson = {
+            type: "FeatureCollection",
+            features: validFeatures.map((feature: Feature) => ({
+              type: "Feature",
+              geometry: feature.geometry,
+              properties: feature.properties || {},
+            })),
+          } as T;
 
-         console.log(
-           `${dataType} (array): ${validFeatures.length} valid features out of ${data.length}`
-         );
+          setter(validGeoJson);
+          return validFeatures.length;
+        } else if (Array.isArray(data)) {
+          // Handle array of features
+          const validFeatures = data.filter(
+            (feature: Feature) =>
+              feature.geometry &&
+              hasCoordinates(feature.geometry) &&
+              feature.geometry.coordinates &&
+              feature.geometry.coordinates.length > 0
+          );
 
-         const validGeoJson: FeatureCollection = {
-           type: "FeatureCollection",
-           features: validFeatures.map((feature: Feature) => ({
-             type: "Feature",
-             geometry: feature.geometry,
-             properties: feature.properties || {},
-           })),
-         };
+          console.log(
+            `${dataType} (array): ${validFeatures.length} valid features out of ${data.length}`
+          );
 
-         setter(validGeoJson);
-         return validFeatures.length;
-       } else {
-         throw new Error(
-           `Invalid ${dataType} GeoJSON format received from API`
-         );
-       }
-     } catch (error) {
-       console.error(`Error fetching ${dataType}:`, error);
-       throw error;
-     }
-   },
-   []
- );
+          const validGeoJson = {
+            type: "FeatureCollection",
+            features: validFeatures.map((feature: Feature) => ({
+              type: "Feature",
+              geometry: feature.geometry,
+              properties: feature.properties || {},
+            })),
+          } as T;
 
-  // Fit map viewport to bounds of all data
-  const fitMapToBounds = useCallback(() => {
-    try {
-      if (!fasumData && !jawaData && !jawaHealthData && !klHealthData) return;
+          setter(validGeoJson);
+          return validFeatures.length;
+        } else {
+          throw new Error(
+            `Invalid ${dataType} GeoJSON format received from API`
+          );
+        }
+      } catch (error) {
+        console.error(`Error fetching ${dataType}:`, error);
+        throw error;
+      }
+    },
+    [hasCoordinates]
+  );
+ const fitMapToBounds = useCallback(() => {
+   try {
+     if (!fasumData && !jawaData && !jawaHealthData && !klHealthData) return;
 
-      // Combine all features
-      const allFeatures = [
-        ...(fasumData?.features || []),
-        ...(jawaData?.features || []),
-        ...(jawaHealthData?.features || []),
-        ...(klHealthData?.features || []),
-      ];
+     // Combine all features
+     const allFeatures = [
+       ...(fasumData?.features || []),
+       ...(jawaData?.features || []),
+       ...(jawaHealthData?.features || []),
+       ...(klHealthData?.features || []),
+     ];
 
-      if (allFeatures.length === 0) return;
+     if (allFeatures.length === 0) return;
 
-      // Create a FeatureCollection with all features
-      const allFeaturesCollection = turf.featureCollection(allFeatures);
+     // Create a FeatureCollection with all features
+     const allFeaturesCollection = turf.featureCollection(allFeatures);
 
-      // Get the bounding box
-      const bbox = turf.bbox(allFeaturesCollection);
+     // Get the bounding box
+     const bbox = turf.bbox(allFeaturesCollection);
 
-      // Convert bbox to viewport
-      const centerLng = (bbox[0] + bbox[2]) / 2;
-      const centerLat = (bbox[1] + bbox[3]) / 2;
+     // Convert bbox to viewport
+     const centerLng = (bbox[0] + bbox[2]) / 2;
+     const centerLat = (bbox[1] + bbox[3]) / 2;
 
-      // Calculate zoom level (simple approximation)
-      const longitudeDelta = Math.abs(bbox[2] - bbox[0]);
-      const latitudeDelta = Math.abs(bbox[3] - bbox[1]);
-      const maxDelta = Math.max(longitudeDelta, latitudeDelta);
-      const zoom = Math.max(5, 14 - Math.log2(maxDelta * 100));
+     // Calculate zoom level (simple approximation)
+     const longitudeDelta = Math.abs(bbox[2] - bbox[0]);
+     const latitudeDelta = Math.abs(bbox[3] - bbox[1]);
+     const maxDelta = Math.max(longitudeDelta, latitudeDelta);
+     const zoom = Math.max(5, 14 - Math.log2(maxDelta * 100));
 
-      setViewport({
-        latitude: centerLat,
-        longitude: centerLng,
-        zoom: zoom,
-      });
+     setViewport({
+       latitude: centerLat,
+       longitude: centerLng,
+       zoom: zoom,
+     });
 
-      console.log("Set viewport to show all data:", {
-        centerLat,
-        centerLng,
-        zoom,
-      });
-    } catch (error) {
-      console.error("Error calculating viewport bounds:", error);
-    }
-  }, [fasumData, jawaData, jawaHealthData, klHealthData]);
+     console.log("Set viewport to show all data:", {
+       centerLat,
+       centerLng,
+       zoom,
+     });
+   } catch (error) {
+     console.error("Error calculating viewport bounds:", error);
+   }
+ }, [fasumData, jawaData, jawaHealthData, klHealthData]);
 
   // Fetch all data
   const fetchAllData = useCallback(async () => {
@@ -327,14 +256,23 @@ const MapView = () => {
         klHealth: 0,
       };
 
-      stats.fasum = await fetchGeoJsonData("fasum", setFasumData, "fasum");
-      stats.jawa = await fetchGeoJsonData("jawa", setJawaData, "jawa");
-      stats.jawaHealth = await fetchGeoJsonData(
+      // Use the correct generic types when calling fetchGeoJsonData
+      stats.fasum = await fetchGeoJsonData<FasumGeoJson>(
+        "fasum",
+        setFasumData,
+        "fasum"
+      );
+      stats.jawa = await fetchGeoJsonData<FeatureCollection>(
+        "jawa",
+        setJawaData,
+        "jawa"
+      );
+      stats.jawaHealth = await fetchGeoJsonData<FeatureCollection>(
         "jawa_health",
         setJawaHealthData,
         "jawa_health"
       );
-      stats.klHealth = await fetchGeoJsonData(
+      stats.klHealth = await fetchGeoJsonData<FeatureCollection>(
         "kl_health",
         setKlHealthData,
         "kl_health"
@@ -351,7 +289,6 @@ const MapView = () => {
       setIsLoading(false);
     }
   }, [fetchGeoJsonData, fitMapToBounds]);
-
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
